@@ -11,5 +11,15 @@ module MXNet
     def self.handle
       @handle ||= load_lib
     end
+
+    def self.ractor
+      @ractor ||= Ractor.new do
+        loop do
+          Ractor.recv
+          MXNet::NDArray.array([1,1], ctx: MXNet.gpu(1))
+        end
+      end
+    end
+    
   end
 end

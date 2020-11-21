@@ -1,8 +1,29 @@
 #include "mxnet_internal.h"
+#include "ruby/thread_native.h"
+#include "ruby/internal/core/rdata.h"
+
 
 VALUE mxnet_mLibMXNet;
 VALUE mxnet_eAPINotFound;
 struct mxnet_api_table api_table;
+
+
+typedef struct rb_ractor_struct rb_ractor_t;
+
+static inline rb_ractor_t *
+RACTOR_PTR(VALUE self)
+{
+
+    rb_ractor_t *r = DATA_PTR(self);
+    // TODO: check
+    return r;
+}
+
+struct rb_ractor_struct {
+    // ractor lock
+    rb_nativethread_lock_t lock;
+};
+
 
 struct mxnet_api_table *
 mxnet_get_api_table(void)
@@ -336,9 +357,28 @@ void
 mxnet_init_libmxnet(void)
 {
   VALUE handle;
+  VALUE ractorv;
+
+
   mxnet_mLibMXNet = rb_const_get_at(mxnet_mMXNet, rb_intern("LibMXNet"));
   mxnet_eAPINotFound = rb_define_class_under(mxnet_mMXNet, "APINotFound", mxnet_eError);
+  
+
+  
+  
   handle = rb_funcallv(mxnet_mLibMXNet, rb_intern("handle"), 0, 0);
+
+  
+  ractorv = rb_funcallv(mxnet_mLibMXNet, rb_intern("ractor"), 0, 0);
+
+
+  rb_ractor_t* ractor = RACTOR_PTR(ractorv);
+
+  rb_nativethread_lock_unlock(&ractor->lock);
+  
+  
+  
+
   rb_define_module_function(mxnet_mLibMXNet, "imperative_invoke", imperative_invoke, 5);
   rb_define_module_function(mxnet_mLibMXNet, "symbol_creator", symbol_creator, 6);
   rb_define_module_function(mxnet_mLibMXNet, "create_variable", create_variable, 1);
